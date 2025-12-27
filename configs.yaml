@@ -1,31 +1,32 @@
 basic:
-  #input_size: 1600
-  input_size: 1024
-  output_size: 500
+  H: 300
+  W: 480
   seed: 1
+  dataset: rml              # rml or mirflickr
+  downsize_coeff: 4        # downsize factor for input images
 
 loss:
   MSE_t: 1
   LPIPS_t: 0
 
 dir:
-  save_model_dir: /home/ponoma/workspace/Lensless_Imaging_Transformer/1k_images/   
-  load_model_dir: /home/ponoma/workspace/Lensless_Imaging_Transformer/1k_images/
-  val_pattern_dir: '/home/ponoma/workspace/Lensless_Imaging_Transformer/datasets/PetImages_1600/Dog/4625.npy'   # path to an image in val_directory to save as reference
-  val_rec_dir: /home/ponoma/workspace/Lensless_Imaging_Transformer/1k_images/
-  dataset_dir: /home/ponoma/workspace/Lensless_Imaging_Transformer/datasets/
-
+  save_model_dir: /home/ponoma/workspace/Pan_Transformer/pan_0.5_rml_6_x4_downsize/   
+  load_model_dir: /home/ponoma/workspace/Pan_Transformer/testing/
+  val_pattern_dir: '/home/lakabuli/cosmos_drive/dataset100k/rml/img_64_cam_1.tiff'   # path to an image in val_directory to save as reference
+  val_pattern_gt_dir: '/home/lakabuli/cosmos_drive/dataset100k/undistorted_images/undistorted_img_64_cam_2.tiff'
+  val_rec_dir: /home/ponoma/workspace/Pan_Transformer/testing/     # where to save val reference image from above
+  dataset_dir: /home/ponoma/workspace/Pan_Transformer/datasets/
 
 train:
-  GPU_num: 2
+  GPU_num: 2 #2 TODO: not doing GPU parallelization
   load: False # TODO: changed this because no model to load
   num_steps: 450000
   eval_every: 15000 
-  train_batch_size: 3
+  train_batch_size: 6
 
 optimizer:
   optimizer: AdamW
-  learning_rate: 6e-5
+  learning_rate: 6e-5   # 6e-5 TODO: changed because after splitting into validation, model started to run super slowly
   weight_decay: 0.1
 
 scheduler:

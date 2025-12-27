@@ -1,89 +1,41 @@
 import os
 import numpy as np
 import random
+from natsort import natsorted
 
-pattern_path= '/home/ponoma/workspace/Lensless_Imaging_Transformer/datasets/' #lenseless camera pictures
-ori_path= '/home/ponoma/workspace/Lensless_Imaging_Transformer/datasets/' #lensed camera pictures
-save_path=  '/home/ponoma/workspace/Lensless_Imaging_Transformer/datasets/' 
+save_path = "/home/ponoma/workspace/Pan_Transformer/datasets/"  
+root_dir = "/home/lakabuli/cosmos_drive/dataset100k"        
+data_dir = os.path.join(root_dir, "rml")  
+target_dir = os.path.join(root_dir, "undistorted_images") 
 
-#mirflickr25k
-train_ori_mk_files=[]
-val_ori_mk_files=[]
-train_pattern_mk_files=[] # pattern = diffusercam images
-val_pattern_mk_files=[]
-test_pattern_mk_files=[]
-test_ori_mk_files =[]
+full_data_list_data = os.listdir(data_dir)
+sorted_data_list_data = natsorted(full_data_list_data) # Sort the lists in numerical order
 
-# files=os.listdir(pattern_path+'mirflickr_dataset/diffuser_images_npy') # original path: mirflickr25k_1600/train/
-# #files.sort()
-# random.shuffle(files)
-# i = 0
-# for file in files:
-#     if i < 0.7 * len(files):
-#         train_pattern_mk_files.append(pattern_path+'mirflickr_dataset/diffuser_images_npy/'+file)
-#         train_ori_mk_files.append(ori_path + 'mirflickr_dataset/ground_truth_lensed/' + file[:-3] + 'jpg')   
-#     elif i < 0.85 * len(files):
-#         val_pattern_mk_files.append(pattern_path+'mirflickr_dataset/diffuser_images_npy/'+file)
-#         val_ori_mk_files.append(ori_path + 'mirflickr_dataset/ground_truth_lensed' + file[:-3] + 'jpg')
-#     else: 
-#         test_pattern_mk_files.append(pattern_path+'mirflickr_dataset/diffuser_images_npy/'+file)
-#         test_ori_mk_files.append(ori_path + 'mirflickr_dataset/ground_truth_lensed/' + file[:-3] + 'jpg')
-#     i += 1
+full_data_list_target = os.listdir(target_dir)
+sorted_data_list_target = natsorted(full_data_list_target)
 
-# files=os.listdir(pattern_path+'mirflickr_dataset/ground_truth_lensed_npy')
-# files.sort()
-# for file in files:
-#     val_pattern_mk_files.append(pattern_path+'mirflickr_dataset/ground_truth_lensed_npy'+file)
-#     val_ori_mk_files.append(ori_path + 'mirflickr25k/val/' + file[:-3]+'jpg')
+# need two separate lists because they use different file naming conventions
+train_set = sorted_data_list_data[5000:int(len(sorted_data_list_data) * 0.5)]      # just want to use 50k images for training
+val_set = sorted_data_list_data[1000:5000]
 
-#fruits,PetImages
-ori_fP_files = []
-pattern_fP_files = []
-ori_val_files = []
-pattern_val_files = []
-ori_test_files = []
-pattern_test_files = []
+train_set_target = sorted_data_list_target[5000:int(len(sorted_data_list_target) * 0.5)]      # just want to use 50k images for training
+val_set_target = sorted_data_list_target[1000:5000]
 
-ori_folder_name='PetImages/'
-pattern_folder_name = 'PetImages_1600/'
+train_imgs_lensless = []
+train_imgs_ground = []
+val_imgs_lensless = []
+val_imgs_ground = []
 
-folders=os.listdir(pattern_path+pattern_folder_name)
-folders.sort()
-for folder in folders:
-    # if folder.startswith("."):      # Added this line because my PetImages has a hidden directory for some reason.
-    #     continue
-    files=os.listdir(pattern_path+pattern_folder_name+folder+'/')
-    #files.sort()
-    random.shuffle(files)
-    i = 0
-    for file in files:
-        if os.path.exists(ori_path+ori_folder_name+folder+'/'+file[:-3]+'jpg'):     
-            if i < 0.7 * len(files):
-                ori_fP_files.append(ori_path+ori_folder_name+folder+'/'+file[:-3]+'jpg')
-                pattern_fP_files.append(pattern_path + pattern_folder_name + folder + '/' + file)
-            elif i < 0.85 * len(files):
-                ori_val_files.append(ori_path+ori_folder_name+folder+'/'+file[:-3]+'jpg')
-                pattern_val_files.append(pattern_path + pattern_folder_name + folder + '/' + file)
-            else:
-                ori_test_files.append(ori_path+ori_folder_name+folder+'/'+file[:-3]+'jpg')
-                pattern_test_files.append(pattern_path + pattern_folder_name + folder + '/' + file)
-        if os.path.exists(ori_path + ori_folder_name + folder + '/' + file[:-3] + 'JPEG'):
-            ori_fP_files.append(ori_path + ori_folder_name + folder + '/' + file[:-3] + 'JPEG')
-            pattern_fP_files.append(pattern_path + pattern_folder_name + folder + '/' + file)
-        i += 1
+# 25k images (4% of data for testing)
+for i in range(len(train_set)):
+    train_imgs_lensless.append(os.path.join(data_dir, train_set[i]))       # first image is missing in Mirflickr dataset
+    train_imgs_ground.append(os.path.join(target_dir, train_set_target[i]))
 
-train_patterns=train_pattern_mk_files+pattern_fP_files
-train_targets=train_ori_mk_files+ori_fP_files
+for i in range(len(val_set)):
+    val_imgs_lensless.append(os.path.join(data_dir, val_set[i]))      
+    val_imgs_ground.append(os.path.join(target_dir, val_set_target[i]))
 
-val_patterns=val_pattern_mk_files+pattern_val_files
-val_targets=val_ori_mk_files+ori_val_files
-
-test_patterns=test_pattern_mk_files+pattern_test_files
-test_targets=test_ori_mk_files+ori_test_files
-
-np.save(save_path+'train_patterns.npy',train_patterns)     
-np.save(save_path+'train_targets.npy',train_targets)
-np.save(save_path+'val_patterns.npy',val_patterns)
-np.save(save_path+'val_targets.npy',val_targets)
-np.save(save_path+'test_patterns.npy',test_patterns)
-np.save(save_path+'test_targets.npy',test_targets)
+np.save(save_path+'train_patterns.npy',train_imgs_lensless)     
+np.save(save_path+'train_targets.npy',train_imgs_ground)
+np.save(save_path+'val_patterns.npy',val_imgs_lensless)
+np.save(save_path+'val_targets.npy',val_imgs_ground)

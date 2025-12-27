@@ -3,22 +3,26 @@ import torch
 from torchvision import transforms, datasets
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, SequentialSampler
 import sys
-sys.path.append('/home/ponoma/workspace/Lensless_Imaging_Transformer/utils/')
+sys.path.append('/home/ponoma/workspace/Pan_Transformer/utils/')  # TODO: would not recognize local path to data_prepare
 from data_prepare import get_data
 
 def get_loader(cfg):
     train_dataset = get_data(
-        input_size=cfg.basic.input_size,
-        output_size=cfg.basic.output_size,
+        input_size=(cfg.basic.H, cfg.basic.W),
+        output_size=(cfg.basic.H, cfg.basic.W),
         save_dir=cfg.dir.dataset_dir,
-        split='train'
+        split='train',
+        dataset=cfg.basic.dataset,
+        downsize_coeff=cfg.basic.downsize_coeff
     )
 
     val_dataset = get_data(
-        input_size=cfg.basic.input_size,
-        output_size=cfg.basic.output_size,
+        input_size=(cfg.basic.H, cfg.basic.W),
+        output_size=(cfg.basic.H, cfg.basic.W),
         save_dir=cfg.dir.dataset_dir,
-        split='val'
+        split='val',
+        dataset=cfg.basic.dataset,
+        downsize_coeff=cfg.basic.downsize_coeff
     )
 
     train_sampler = RandomSampler(train_dataset)
