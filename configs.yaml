@@ -21,7 +21,7 @@ train:
   GPU_num: 2 #2 TODO: not doing GPU parallelization
   load: False # TODO: changed this because no model to load
   num_steps: 450000
-  eval_every: 15000 
+  eval_every: 5000 
   train_batch_size: 6
 
 optimizer:

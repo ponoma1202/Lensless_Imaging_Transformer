@@ -27,6 +27,7 @@ class get_data(Dataset):
         self.dataset = dataset
         self.downsize_coeff = downsize_coeff
 
+        self.use_processed = True
         self.homography_matrix = torch.load("/home/ponoma/workspace/Lensless_Image_Reconstruction/data/GT2RML_homography_x4_color_detached.npy", weights_only=True)
 
         if self.split == 'train':
@@ -51,14 +52,19 @@ class get_data(Dataset):
             target = tifffile.imread(self.targets[idx])
             height, width, _ = pattern.shape
 
-            pattern = (pattern/255).astype(np.float32)     # max of measurements is 255. Normalizing to range [0, 1]
-            target = (target/255).astype(np.float32)
+            if np.max(pattern) > 1.0:
+                pattern = (pattern/255).astype(np.float32)     # max of measurements is 255. Normalizing to range [0, 1]
+            if np.max(target) > 1.0:
+                target = (target/255).astype(np.float32)
 
             pattern = resize(pattern, (height // self.downsize_coeff, width // self.downsize_coeff), anti_aliasing=True).astype(np.float32) 
-            target = resize(target, (height // self.downsize_coeff, width // self.downsize_coeff), anti_aliasing=True).astype(np.float32)
+
+            if not self.use_processed:
+                target = resize(target, (height // self.downsize_coeff, width // self.downsize_coeff), anti_aliasing=True).astype(np.float32)
+                target = apply_homography(target)
 
             pattern = np.clip(pattern, 0,1)
-            target = apply_homography(target)
+            target = np.clip(target, 0,1)
 
         # Randomly pics one channel to learn from
         c = random.randint(0, 2)

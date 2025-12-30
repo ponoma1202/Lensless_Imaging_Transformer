@@ -247,25 +247,11 @@ def train(cfg, debug):
                 train_mse_loss = interval_mse / interval_steps
 
                 if not debug:
-                    wandb_data = {"training_mse_loss":train_mse_loss, 
+                    wandb.log({"training_mse_loss":train_mse_loss, 
                             "training_psnr": train_psnr_out,
                             "train_ssim": train_ssim_out,
-                            "train_mse": train_mse_loss,
-                            "val_mse": val_mse_loss,
-                            "val_psnr": val_psnr_out, 
-                            "val_ssim": val_ssim_out,
-                            "val_loss": val_loss_out,
                             "epoch":global_step, 
-                            "learning rate":optimizer.param_groups[-1]['lr']}
-                    if val_psnr_out != 0:
-                        wandb_data.update({
-                            "val_mse": val_mse_loss,
-                            "val_psnr": val_psnr_out, 
-                            "val_ssim": val_ssim_out,
-                            "val_loss": val_loss_out,
-                        })
-                    wandb.log(wandb_data)
-
+                            "learning rate":optimizer.param_groups[-1]['lr']})
                 # Reset metrics for next interval
                 train_psnr.reset()
                 train_ssim.reset()
@@ -274,7 +260,7 @@ def train(cfg, debug):
                 interval_steps = 0
 
             if global_step % cfg.train.eval_every == 0:
-                #val_loss_out, val_psnr_out, val_mse_loss, val_ssim_out, val_loss_out_duplicate=valid(cfg, model, val_loader, global_step, val_psnr, val_ssim)
+                val_loss_out, val_psnr_out, val_mse_loss, val_ssim_out, val_loss_out_duplicate=valid(cfg, model, val_loader, global_step, val_psnr, val_ssim)
 
                 if val_mse_loss < best_losses:
                     torch.save(model.state_dict(), os.path.join(cfg.dir.save_model_dir, "best_model.pth"))
@@ -295,7 +281,7 @@ def train(cfg, debug):
                     test_in_one_channel = test_in[:, :, c]
                     test_in_one_channel = np.reshape(test_in_one_channel,
                                                      (1, 1, cfg.basic.H, cfg.basic.W))
-                    test_in_one_channel = (test_in_one_channel - test_in_one_channel.mean()) / test_in_one_channel.std()
+                    #test_in_one_channel = (test_in_one_channel - test_in_one_channel.mean()) / test_in_one_channel.std()
                     test_in_one_channel.astype(float)
                     test_in_one_channel = torch.from_numpy(test_in_one_channel)
                     test_in_one_channel.cuda()
@@ -313,6 +299,10 @@ def train(cfg, debug):
 
                 if not debug:
                     wandb.log({
+                        "val_mse": val_mse_loss,
+                        "val_psnr": val_psnr_out, 
+                        "val_ssim": val_ssim_out,
+                        "val_loss": val_loss_out,
                         "reconstructed butterfly": wandb.Image(test_out),
                         "ground truth butterfly": wandb.Image(ground_truth),
                         "val_step": global_step # distinct step for Image slider

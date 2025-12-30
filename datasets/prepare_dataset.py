@@ -4,9 +4,9 @@ import random
 from natsort import natsorted
 
 save_path = "/home/ponoma/workspace/Pan_Transformer/datasets/"  
-root_dir = "/home/lakabuli/cosmos_drive/dataset100k"        
-data_dir = os.path.join(root_dir, "rml")  
-target_dir = os.path.join(root_dir, "undistorted_images") 
+# root_dir = "/home/lakabuli/cosmos_drive/dataset100k"        
+data_dir = "/home/lakabuli/cosmos_drive/dataset100k/rml" #os.path.join(root_dir, "rml")  
+target_dir = "/home/clara/4tb_patrick/dataset100k/4x_warped_ground_truth"
 
 full_data_list_data = os.listdir(data_dir)
 sorted_data_list_data = natsorted(full_data_list_data) # Sort the lists in numerical order
@@ -18,7 +18,7 @@ sorted_data_list_target = natsorted(full_data_list_target)
 train_set = sorted_data_list_data[5000:int(len(sorted_data_list_data) * 0.5)]      # just want to use 50k images for training
 val_set = sorted_data_list_data[1000:5000]
 
-train_set_target = sorted_data_list_target[5000:int(len(sorted_data_list_target) * 0.5)]      # just want to use 50k images for training
+train_set_target = sorted_data_list_target[5000:50000]      # just want to use 50k images for training
 val_set_target = sorted_data_list_target[1000:5000]
 
 train_imgs_lensless = []
