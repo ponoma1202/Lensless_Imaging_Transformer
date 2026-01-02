@@ -71,7 +71,7 @@ class get_data(Dataset):
         pattern=pattern[:,:,c]
         target = target[:, :, c]
 
-        return np.reshape(pattern, (1,self.input_size[0], self.input_size[1])), np.reshape(target, (1,self.output_size[0], self.output_size[1]))
+        return np.reshape(pattern, (1,self.input_size[0], self.input_size[1])), np.reshape(target, (1,self.output_size[0], self.output_size[1]))        # puts it channels first
     
 
 def apply_homography(img, dataset="rml", downsize=4):

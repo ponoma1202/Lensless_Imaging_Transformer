@@ -266,6 +266,7 @@ def train(cfg, debug):
                     torch.save(model.state_dict(), os.path.join(cfg.dir.save_model_dir, "best_model.pth"))
                     best_losses = val_mse_loss
                     print(f"New best model saved at step {global_step}")
+                torch.save(model.state_dict(), os.path.join(cfg.dir.save_model_dir, f'model_step_{global_step}.pth'))       # save that model regardless 
 
                 # save a validation rec image. 
                 # save an image from validation run as visual reference while running model - VP
