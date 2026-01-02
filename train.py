@@ -171,6 +171,22 @@ def train(cfg, debug):
 
     scheduler = WarmupCosineSchedule(optimizer, warmup_steps=cfg.scheduler.warmup_steps, t_total=t_total)
 
+    global_step=0
+    best_losses = 999999
+
+    checkpoint_path = os.path.join(cfg.dir.load_model_dir, 'latest_model.pth')
+    if os.path.exists(checkpoint_path) and cfg.train.load: 
+        logger.info(f"Loading checkpoint from {checkpoint_path}")
+        checkpoint = torch.load(checkpoint_path)
+        
+        # Load all states
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+        global_step = checkpoint['global_step']
+        
+        logger.info(f"Resumed training from step {global_step}")
+
     model.zero_grad()
 
     train_psnr = PSNR(data_range=1.0).cuda()
@@ -185,8 +201,6 @@ def train(cfg, debug):
     losses = AverageMeter()
     MSE = torch.nn.MSELoss()
     MSE.cuda()
-    global_step=0
-    best_losses = 999999
 
     interval_loss = 0.0
     interval_mse = 0.0
@@ -239,7 +253,13 @@ def train(cfg, debug):
             )
 
             if global_step % 1000 == 0:         # TODO: added this if - VP
-                torch.save(model.state_dict(), os.path.join(cfg.dir.save_model_dir, 'latest_model.pth'))
+                checkpoint_dict = {
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'scheduler_state_dict': scheduler.state_dict(), # Important for Warmup/Decay
+                    'global_step': global_step,
+                }
+                torch.save(checkpoint_dict, os.path.join(cfg.dir.save_model_dir, 'latest_model.pth'))
 
                 train_psnr_out = train_psnr.compute().item()
                 train_ssim_out = train_ssim.compute().item()
@@ -262,11 +282,18 @@ def train(cfg, debug):
             if global_step % cfg.train.eval_every == 0:
                 val_loss_out, val_psnr_out, val_mse_loss, val_ssim_out, val_loss_out_duplicate=valid(cfg, model, val_loader, global_step, val_psnr, val_ssim)
 
+                checkpoint_dict = {
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'scheduler_state_dict': scheduler.state_dict(), # Important for Warmup/Decay
+                    'global_step': global_step,
+                }
+
                 if val_mse_loss < best_losses:
-                    torch.save(model.state_dict(), os.path.join(cfg.dir.save_model_dir, "best_model.pth"))
+                    torch.save(checkpoint_dict, os.path.join(cfg.dir.save_model_dir, "best_model.pth"))
                     best_losses = val_mse_loss
                     print(f"New best model saved at step {global_step}")
-                torch.save(model.state_dict(), os.path.join(cfg.dir.save_model_dir, f'model_step_{global_step}.pth'))       # save that model regardless 
+                torch.save(checkpoint_dict, os.path.join(cfg.dir.save_model_dir, f'model_step_{global_step}.pth'))       # save that model regardless 
 
                 # save a validation rec image. 
                 # save an image from validation run as visual reference while running model - VP
