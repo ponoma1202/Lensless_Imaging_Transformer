@@ -1,34 +1,51 @@
 basic:
-  H: 300
+  H: 300    #270 if mirflickr
   W: 480
   seed: 1
   dataset: rml              # rml or mirflickr
   downsize_coeff: 4        # downsize factor for input images
+  dataset_size: 0.5       # purely for logging purposes right now
+  use_processed: True     # doesn't do anything right now lol
 
 loss:
   MSE_t: 1
   LPIPS_t: 0
 
 dir:
-  save_model_dir: /home/ponoma/workspace/Pan_Transformer/pan_0.5_rml_6_x4_downsize/   
-  load_model_dir: /home/ponoma/workspace/Pan_Transformer/testing/
-  val_pattern_dir: '/home/lakabuli/cosmos_drive/dataset100k/rml/img_64_cam_1.tiff'   # path to an image in val_directory to save as reference
-  val_pattern_gt_dir: '/home/lakabuli/cosmos_drive/dataset100k/undistorted_images/undistorted_img_64_cam_2.tiff'
-  val_rec_dir: /home/ponoma/workspace/Pan_Transformer/testing/     # where to save val reference image from above
-  dataset_dir: /home/ponoma/workspace/Pan_Transformer/datasets/
+  checkpoints_dir: '/home/ponoma/workspace/Pan_Transformer/my_checkpoints/'   
+  load_model_dir: '/home/ponoma/workspace/Pan_Transformer/my_checkpoints/pan_0.5_rml_6_x4_downsize_3e-05_lr'
+  val_pattern_dir: '/home/lakabuli/4tb_patrick/dataset100k26/4x_rml/4x_img_64_cam_1.tiff'   # path to an image in val_directory to save as reference
+  val_pattern_gt_dir: '/home/lakabuli/4tb_patrick/dataset100k26/4x_undistorted_GT2RML/warped_4x_undistorted_img_64_cam_2.tiff'
+  val_rec_dir: '/home/ponoma/workspace/Pan_Transformer/testing/'   # where to save val reference image from above
+  dataset_dir: '/home/ponoma/workspace/Pan_Transformer/datasets/'
 
 train:
-  GPU_num: 2 #2 TODO: not doing GPU parallelization
-  load: False # TODO: changed this because no model to load
+  GPU_num: 2 #2 this sets number of gpus used for parallelization (also used to calculate num workers)
+  load: True # TODO: changed this because no model to load
   num_steps: 450000
   eval_every: 5000 
   train_batch_size: 6
 
 optimizer:
   optimizer: AdamW
-  learning_rate: 6e-5   # 6e-5 TODO: changed because after splitting into validation, model started to run super slowly
+  learning_rate: 3e-5   # TODO: changed from 6e-5
   weight_decay: 0.1
 
 scheduler:
   use: True
   warmup_steps: 0
+
+# Inference-only (does not change training). Requires test_patterns.npy / test_targets.npy under dir.dataset_dir.
+infer:
+  gpu_visible_id: "0"
+  gpu_num: 0
+  batch_size: 1                    # test DataLoader batch size (each sample is full RGB)
+  save_ids: [1, 64, 93, 195, 912]                      # if non-empty, only save .npy for these image ids; empty => save nothing
+  save_metrics: True
+  save_infer_dir: "/home/ponoma/workspace/Pan_Transformer/infer_results"
+  # Optional full path to checkpoint; if null, uses checkpoints_dir/<run_name>/best_model.pth
+  checkpoint_path: null
+  warp_to_gt: True
+  # Homography .npy (GT2imager); inverted at runtime for imager -> GT (same as your previous inference.py).
+  homography_rml: "/home/ponoma/workspace/ConvRML_clean/homography_matrices/GT2RML_homography_4x_2026_detached.npy"
+  homography_diffusercam: "/home/ponoma/workspace/ConvRML_clean/homography_matrices/GT2DC_homography_x4_2026_detached_May2026_FINAL.npy"

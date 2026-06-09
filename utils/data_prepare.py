@@ -18,7 +18,8 @@ class get_data(Dataset):
         save_dir,
         split,
         dataset,
-        downsize_coeff
+        downsize_coeff,
+        stack_rgb=False,
     ):
         self.input_size=input_size
         self.output_size=output_size
@@ -26,16 +27,25 @@ class get_data(Dataset):
         self.split=split
         self.dataset = dataset
         self.downsize_coeff = downsize_coeff
+        # When True (e.g. test/inference): return full RGB (3, H, W) so the model can be run once per channel.
+        # Training/val keep stack_rgb=False and use one random channel per sample.
+        self.stack_rgb = stack_rgb
 
         self.use_processed = True
-        self.homography_matrix = torch.load("/home/ponoma/workspace/Lensless_Image_Reconstruction/data/GT2RML_homography_x4_color_detached.npy", weights_only=True)
+        if dataset == 'rml' and not self.use_processed:
+            self.homography_matrix = torch.load("/home/ponoma/workspace/ConvRML_clean/homography_matrices/GT2DC_homography_x4_2026_detached_May2026_FINAL.npy", weights_only=True)
 
         if self.split == 'train':
             self.patterns=np.load(self.save_dir+'train_patterns.npy')
             self.targets = np.load(self.save_dir + 'train_targets.npy')
-        else:
+        elif self.split == 'val':
             self.patterns = np.load(self.save_dir + 'val_patterns.npy')
             self.targets = np.load(self.save_dir + 'val_targets.npy')
+        elif self.split == 'test':
+            self.patterns = np.load(self.save_dir + 'test_patterns.npy')
+            self.targets = np.load(self.save_dir + 'test_targets.npy')
+        else:
+            raise ValueError("split must be 'train', 'val', or 'test'")
 
     def __len__(self):
         return len(self.patterns)
@@ -52,12 +62,17 @@ class get_data(Dataset):
             target = tifffile.imread(self.targets[idx])
             height, width, _ = pattern.shape
 
+            if pattern.shape[-1] == 4:
+                pattern = pattern[..., :-1]
+            if target.shape[-1] == 4:
+                target = target[..., :-1]
+
             if np.max(pattern) > 1.0:
                 pattern = (pattern/255).astype(np.float32)     # max of measurements is 255. Normalizing to range [0, 1]
             if np.max(target) > 1.0:
                 target = (target/255).astype(np.float32)
 
-            pattern = resize(pattern, (height // self.downsize_coeff, width // self.downsize_coeff), anti_aliasing=True).astype(np.float32) 
+            #pattern = resize(pattern, (height // self.downsize_coeff, width // self.downsize_coeff), anti_aliasing=True).astype(np.float32) 
 
             if not self.use_processed:
                 target = resize(target, (height // self.downsize_coeff, width // self.downsize_coeff), anti_aliasing=True).astype(np.float32)
@@ -66,13 +81,19 @@ class get_data(Dataset):
             pattern = np.clip(pattern, 0,1)
             target = np.clip(target, 0,1)
 
-        # Randomly pics one channel to learn from
+        if self.stack_rgb:
+            pattern_chw = np.transpose(pattern.astype(np.float32), (2, 0, 1))
+            target_chw = np.transpose(target.astype(np.float32), (2, 0, 1))
+            name = os.path.basename(str(self.patterns[idx]))
+            return pattern_chw, target_chw, name
+
+        # Randomly pick one channel to learn from (training / val)
         c = random.randint(0, 2)
-        pattern=pattern[:,:,c]
+        pattern = pattern[:, :, c]
         target = target[:, :, c]
 
         return np.reshape(pattern, (1,self.input_size[0], self.input_size[1])), np.reshape(target, (1,self.output_size[0], self.output_size[1]))        # puts it channels first
-    
+        
 
 def apply_homography(img, dataset="rml", downsize=4):
     if dataset == "rml":
@@ -81,7 +102,7 @@ def apply_homography(img, dataset="rml", downsize=4):
             M = torch.inverse(M)
         else:
             if downsize == 4:
-                M = torch.load("/home/ponoma/workspace/Lensless_Image_Reconstruction/data/GT2RML_homography_x4_color_detached.npy").to(torch.float32)
+                M = torch.load("/home/ponoma/workspace/ConvRML_clean/homography_matrices/GT2DC_homography_x4_2026_detached_May2026_FINAL.npy").to(torch.float32)
     elif dataset == "diffusercam":
         if downsize == 4:
             M = torch.load("../data/DC2GT_homography_x4_color_detached.npy")

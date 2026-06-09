@@ -200,10 +200,7 @@ class Encoder(nn.Module):
         self.depths = depths
         self.embed_dims = embed_dims
 
-        def get_feat_size(h, w, patch_func):
-            # You can either hardcode the math or instantiate a dummy layer to check. 
-            # Hardcoding for speed based on your existing layers:
-            
+        def get_feat_size(h, w, patch_func):       
             if patch_func == 1: # k=7, s=4, p=3
                  return (h + 2*3 - 7)//4 + 1, (w + 2*3 - 7)//4 + 1
             else: # k=3, s=2, p=1

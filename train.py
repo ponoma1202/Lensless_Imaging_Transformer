@@ -1,7 +1,7 @@
 import os
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
-os.environ["CUDA_VISIBLE_DEVICES"] = '2'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 import wandb
 import random
@@ -63,8 +63,8 @@ def setup(cfg):
     num_params = count_parameters(model)
     logger.info("Total Parameter: \t%2.1fM" % num_params)
 
-    if cfg.train.load == True:
-        load_model(cfg, model)
+    # if cfg.train.load == True:
+    #     load_model(cfg, model)
 
     return model
 
@@ -136,7 +136,7 @@ def valid(cfg, model, val_loader, global_step, val_psnr, val_ssim):
     return eval_losses.avg, avg_psnr, avg_mse, avg_ssim, avg_loss
 
 
-def train(cfg, debug):
+def train(cfg, debug, save_path):
     """ Train the model """
     model = setup(cfg)
     #freezing layers
@@ -170,7 +170,7 @@ def train(cfg, debug):
     t_total = cfg.train.num_steps
 
     scheduler = WarmupCosineSchedule(optimizer, warmup_steps=cfg.scheduler.warmup_steps, t_total=t_total)
-
+    
     global_step=0
     best_losses = 999999
 
@@ -259,7 +259,7 @@ def train(cfg, debug):
                     'scheduler_state_dict': scheduler.state_dict(), # Important for Warmup/Decay
                     'global_step': global_step,
                 }
-                torch.save(checkpoint_dict, os.path.join(cfg.dir.save_model_dir, 'latest_model.pth'))
+                torch.save(checkpoint_dict, os.path.join(save_path, 'latest_model.pth'))
 
                 train_psnr_out = train_psnr.compute().item()
                 train_ssim_out = train_ssim.compute().item()
@@ -271,7 +271,7 @@ def train(cfg, debug):
                             "training_psnr": train_psnr_out,
                             "train_ssim": train_ssim_out,
                             "epoch":global_step, 
-                            "learning rate":optimizer.param_groups[-1]['lr']})
+                            "learning rate":optimizer.param_groups[-1]['lr']}, step=global_step)
                 # Reset metrics for next interval
                 train_psnr.reset()
                 train_ssim.reset()
@@ -290,10 +290,10 @@ def train(cfg, debug):
                 }
 
                 if val_mse_loss < best_losses:
-                    torch.save(checkpoint_dict, os.path.join(cfg.dir.save_model_dir, "best_model.pth"))
+                    torch.save(checkpoint_dict, os.path.join(save_path, "best_model.pth"))
                     best_losses = val_mse_loss
                     print(f"New best model saved at step {global_step}")
-                torch.save(checkpoint_dict, os.path.join(cfg.dir.save_model_dir, f'model_step_{global_step}.pth'))       # save that model regardless 
+                torch.save(checkpoint_dict, os.path.join(save_path, f'model_step_{global_step}.pth'))
 
                 # save a validation rec image. 
                 # save an image from validation run as visual reference while running model - VP
@@ -301,7 +301,7 @@ def train(cfg, debug):
                 test_in = tifffile.imread(cfg.dir.val_pattern_dir)
                 test_in = (test_in/255).astype(np.float32)     # max of measurements is 255. Normalizing to range [0, 1]
                 height, width, _ = test_in.shape
-                test_in = resize(test_in, (height // cfg.basic.downsize_coeff, width // cfg.basic.downsize_coeff), anti_aliasing=True).astype(np.float32) 
+                # test_in = resize(test_in, (height // cfg.basic.downsize_coeff, width // cfg.basic.downsize_coeff), anti_aliasing=True).astype(np.float32) 
                 test_in = np.clip(test_in, 0,1)
                 
                 test_out = np.zeros((cfg.basic.H, cfg.basic.W, 3))
@@ -334,7 +334,7 @@ def train(cfg, debug):
                         "reconstructed butterfly": wandb.Image(test_out),
                         "ground truth butterfly": wandb.Image(ground_truth),
                         "val_step": global_step # distinct step for Image slider
-                    })
+                    }, step=global_step)
                 model.train()
 
             if global_step % t_total == 0:
@@ -362,31 +362,31 @@ def crop_borders(img, dataset, downsize_coeff, batch=False):
                 output = output[:,:,:134, 56:191]     
                 target = target[:,:,:134, 56:191]  
             elif downsize_coeff == 4:
-                output = output[:,:,:267, 111:379]
-                target = target[:,:,:267, 111:379]
+                output = output[:,:,17:295, 112:390]
+                target = target[:,:,17:295, 112:390]
         elif dataset == "rml":
             if downsize_coeff == 8:
                 output = output[:,:,14:134, 61:181]
                 target = target[:,:,14:134, 61:181]
             elif downsize_coeff == 4:
-                output = output[:,:,27:267, 121:361]
-                target = target[:,:,27:267, 121:361]
+                output = output[:,:,31:270, 128:367]
+                target = target[:,:,31:270, 128:367]
         return output, target
 
     assert img.ndim == 3, f"Expected (H,W,C) or (C,H,W), got {img.shape}"
 
     if dataset == "mirflickr":
         img = img[60:,62:-38,:]
-    elif dataset == "diffusercam":
+    elif dataset == "diffuser":
         if downsize_coeff == 8:
             img = img[:134, 56:191,:]  
         elif downsize_coeff == 4:
-            img = img[:267, 111:379,:]
+            img = img[17:295, 112:390, :]
     elif dataset == "rml":
         if downsize_coeff == 8:
             img = img[14:134, 61:181,:]
         elif downsize_coeff == 4:
-            img = img[27:267, 121:361,:]
+            img = img[31:270, 128:367, :]
     return img
 
 def main():       
@@ -397,19 +397,24 @@ def main():
                         datefmt='%m/%d/%Y %H:%M:%S',
                         level=logging.INFO)
     set_seed(cfg)
-    if not os.path.exists(cfg.dir.save_model_dir):          # TODO: added this for saving purposes - VP
-        os.mkdir(cfg.dir.save_model_dir)
 
     debug = False
 
-    wandb_id = None
-    run_name = "pan_0.5_rml_6_x4_downsize"
+    wandb_id = "t1v062qj"
+    if cfg.basic.dataset != 'mirflickr':
+        run_name = f"pan_{cfg.basic.dataset_size}_{cfg.basic.dataset}_{cfg.train.train_batch_size}_x{cfg.basic.downsize_coeff}_downsize_{cfg.optimizer.learning_rate}_lr"
+    else:
+        run_name = f"pan_mirflickr_{cfg.train.train_batch_size}_big_gpu"
     if not debug:
-        run = wandb.init(project="convnext", 
+        run = wandb.init(project="convrml", 
+                         entity="wallerlab",
                          name=run_name, 
                          id=wandb_id,            # If this is None, W&B creates a new ID. If it's a string, it resumes that ID.
                          resume="allow",         # "allow" means: if ID exists, resume it; if not, create new.
                          config={"architecture": "Pan Transformer"})  
+        
+    save_path = os.path.join(cfg.dir.checkpoints_dir, run_name)
+    os.makedirs(save_path, exist_ok=True)
 
     '''
     model = setup(cfg)
@@ -419,7 +424,7 @@ def main():
     with SummaryWriter(comment='Rec_Transformer') as w:
         w.add_graph(model, (dummy_input.to(torch.float),))
     '''
-    train(cfg, debug)
+    train(cfg, debug, save_path)
 
 
 if __name__ == "__main__":

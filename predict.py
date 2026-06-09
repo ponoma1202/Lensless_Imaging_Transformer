@@ -63,9 +63,9 @@ def predict(color, input_size, output_size, model, file, rec_dir):
 def main():
     input_size=1024
     output_size=500
-    test_dir='/home/ponoma/workspace/Lensless_Imaging_Transformer/datasets/test_patterns.npy'
+    test_dir= '/home/ponoma/workspace/Lensless_Imaging_Transformer/datasets/test_patterns.npy'
     files= np.load(test_dir) #os.listdir(test_dir)
-    rec_dir='/home/ponoma/workspace/Lensless_Imaging_Transformer/1k_results'
+    rec_dir= '/home/ponoma/workspace/Lensless_Imaging_Transformer/1k_results'
     if not os.path.exists(rec_dir):
         os.makedirs(rec_dir)
 
@@ -77,7 +77,7 @@ def main():
         folder = os.path.split(rest)[1]
         if not os.path.exists(os.path.join(rec_dir,folder)):
             os.makedirs(os.path.join(rec_dir,folder))
-        predict(True, input_size, output_size, model, file, os.path.join(rec_dir, folder, image_name[:-3] + 'bmp'))
+        predict(True, input_size, output_size, model, files, os.path.join(rec_dir, folder, image_name[:-3] + 'bmp'))
 
 if __name__ == "__main__":
     main()
