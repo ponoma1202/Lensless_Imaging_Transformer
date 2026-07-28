@@ -72,14 +72,12 @@ class get_data(Dataset):
             if np.max(target) > 1.0:
                 target = (target/255).astype(np.float32)
 
-            #pattern = resize(pattern, (height // self.downsize_coeff, width // self.downsize_coeff), anti_aliasing=True).astype(np.float32) 
-
             if not self.use_processed:
                 target = resize(target, (height // self.downsize_coeff, width // self.downsize_coeff), anti_aliasing=True).astype(np.float32)
                 target = apply_homography(target)
 
-            pattern = np.clip(pattern, 0,1)
-            target = np.clip(target, 0,1)
+            pattern = np.clip(pattern, 0,1).astype(np.float32)
+            target = np.clip(target, 0,1).astype(np.float32)
 
         if self.stack_rgb:
             pattern_chw = np.transpose(pattern.astype(np.float32), (2, 0, 1))
@@ -97,19 +95,11 @@ class get_data(Dataset):
 
 def apply_homography(img, dataset="rml", downsize=4):
     if dataset == "rml":
-        if downsize is None:
-            M = torch.load("../data/efov_rml_homography_x8_FINAL_detached.npy").to(torch.float32)
-            M = torch.inverse(M)
-        else:
-            if downsize == 4:
-                M = torch.load("/home/ponoma/workspace/ConvRML_clean/homography_matrices/GT2DC_homography_x4_2026_detached_May2026_FINAL.npy").to(torch.float32)
-    elif dataset == "diffusercam":
         if downsize == 4:
-            M = torch.load("../data/DC2GT_homography_x4_color_detached.npy")
-            M = torch.inverse(M)        # because we actually want GT -> DC space
-    elif dataset == 'efov':
-        M = torch.load("../data/efov_rml_homography_x8_FINAL_detached.npy", weights_only=True).to(torch.float32)
-        M = torch.inverse(M) 
+            M = torch.load("/home/ponoma/workspace/ConvRML_clean/homography_matrices/GT2RML_homography_4x_2026_detached.npy").to(torch.float32)
+    elif dataset == "diffuser":
+        if downsize == 4:
+            M = torch.load("/home/ponoma/workspace/ConvRML_clean/homography_matrices/GT2DC_homography_x4_2026_detached_May2026_FINAL.npy").to(torch.float32)
 
     # Convert to tensor and ensure array is stored contiguously for faster operations
     img = np.ascontiguousarray(img)

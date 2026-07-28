@@ -1,11 +1,11 @@
 basic:
-  H: 300    #270 if mirflickr
+  H: 300   
   W: 480
   seed: 1
-  dataset: rml              # rml or mirflickr
-  downsize_coeff: 4        # downsize factor for input images
-  dataset_size: 0.5       # purely for logging purposes right now
-  use_processed: True     # doesn't do anything right now lol
+  dataset: rml              # rml or diffuser
+  downsize_coeff: 4        
+  dataset_size: 0.5       # purely for logging purposes 
+  use_processed: True    
 
 loss:
   MSE_t: 1
@@ -13,15 +13,17 @@ loss:
 
 dir:
   checkpoints_dir: '/home/ponoma/workspace/Pan_Transformer/my_checkpoints/'   
-  load_model_dir: '/home/ponoma/workspace/Pan_Transformer/my_checkpoints/pan_0.5_rml_6_x4_downsize_3e-05_lr'
+  load_model_dir: ''                                                                        # Do not include 'latest_model.pth'. It will be automatically appended
+
+  # MAKE SURE TO CHANGE THIS PATH DEPENDING ON WHICH DATASET YOU ARE USING. Otherwise your visualized image will diverge.
   val_pattern_dir: '/home/lakabuli/4tb_patrick/dataset100k26/4x_rml/4x_img_64_cam_1.tiff'   # path to an image in val_directory to save as reference
   val_pattern_gt_dir: '/home/lakabuli/4tb_patrick/dataset100k26/4x_undistorted_GT2RML/warped_4x_undistorted_img_64_cam_2.tiff'
   val_rec_dir: '/home/ponoma/workspace/Pan_Transformer/testing/'   # where to save val reference image from above
   dataset_dir: '/home/ponoma/workspace/Pan_Transformer/datasets/'
 
 train:
-  GPU_num: 2 #2 this sets number of gpus used for parallelization (also used to calculate num workers)
-  load: True # TODO: changed this because no model to load
+  GPU_num: 2      # counterintuitive name, but this is used to calculate num workers
+  load: False        
   num_steps: 450000
   eval_every: 5000 
   train_batch_size: 6

@@ -15,11 +15,8 @@ class OverlapPatchEmbed(nn.Module):
 
         self.img_size = img_size
         self.patch_size = patch_size
-        # self.H, self.W = img_size[0] // patch_size[0], img_size[1] // patch_size[1]
-        # TODO: my change
         self.H = img_size[0] // patch_size[0]
         self.W = img_size[1] // patch_size[1]
-        # end TODO
         self.num_patches = self.H * self.W
         self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=stride,
                               padding=(patch_size[0] // 2, patch_size[1] // 2))
@@ -62,14 +59,13 @@ class AxialAttention(nn.Module):
         self.group_planes = out_planes // groups        # embed_dim // num_heads. Ex: 64 // 1 = 64
         # self.kernel_size = kernel_size
 
-        # TODO: my change
+        # Allow kernel size be non-square.
         if isinstance(kernel_size, int):
             kernel_h = kernel_w = kernel_size
         else:
             kernel_h, kernel_w = kernel_size
 
         self.kernel_size = kernel_w if width else kernel_h
-        # end TODO
 
         self.stride = stride
         self.bias = bias
@@ -192,21 +188,22 @@ class Encoder_Block(nn.Module):
 class Encoder(nn.Module):
     def __init__(self, input_size=1600, in_chans=1, embed_dims=[64, 128, 256, 512], num_heads=[1, 2, 4, 8], depths=[2, 2, 2, 2]):
         super(Encoder,self).__init__()
-
-        # Ensure tuple
-        if isinstance(input_size, int): input_size = (input_size, input_size)
-        H, W = input_size
-
         self.depths = depths
         self.embed_dims = embed_dims
 
+        # Ensure tuple, meaning the input can be either a square or rectangular image. 
+        if isinstance(input_size, int): input_size = (input_size, input_size)
+        H, W = input_size
+
+        # Compute the actual spatial size after each patch embedding layer.
+        # This avoids assuming that input_size is square or exactly divisible by 4, 8, and 16.
         def get_feat_size(h, w, patch_func):       
             if patch_func == 1: # k=7, s=4, p=3
                  return (h + 2*3 - 7)//4 + 1, (w + 2*3 - 7)//4 + 1
             else: # k=3, s=2, p=1
                  return (h + 2*1 - 3)//2 + 1, (w + 2*1 - 3)//2 + 1
 
-        # patch_embed
+        # Because patch embedding layers have different kernel sizes and strides, compute the output size after each layer.
         H1, W1 = get_feat_size(H, W, 1)
         H2, W2 = get_feat_size(H1, W1, 2)
         H3, W3 = get_feat_size(H2, W2, 2)
@@ -337,7 +334,7 @@ class Decoder(nn.Module):
     def forward(self, x):
         s1, s2, s3, s4 = x
 
-        s1=F.interpolate(s1, size=self.rec_size, mode='bilinear', align_corners=False)     # doing something similar to U-Net (using residuals from previous layers, but they are all of different sizes, so need to be interpolated)
+        s1=F.interpolate(s1, size=self.rec_size, mode='bilinear', align_corners=False)     
         s2 = F.interpolate(s2, size=self.rec_size, mode='bilinear', align_corners=False)
         s3 = F.interpolate(s3, size=self.rec_size, mode='bilinear', align_corners=False)
         s4 = F.interpolate(s4, size=self.rec_size, mode='bilinear', align_corners=False)

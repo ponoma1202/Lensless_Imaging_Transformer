@@ -1,7 +1,7 @@
 import os
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
-os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'                # TODO: Change this to the GPU number you want to use.
 
 import wandb
 import random
@@ -46,7 +46,6 @@ class AverageMeter(object):
 
 
 def save_model(cfg, model):
-    # torch.save(model.module.state_dict(), cfg.dir.save_model_dir)
     torch.save(model.state_dict(), os.path.join(cfg.dir.save_model_dir, "best_model.pth"))
 
 
@@ -59,12 +58,9 @@ def load_model(cfg, model):
 
 
 def setup(cfg):
-    model = Rec_Transformer(input_size=(cfg.basic.H, cfg.basic.W), rec_size=(cfg.basic.H, cfg.basic.W))               # TODO: added args
+    model = Rec_Transformer(input_size=(cfg.basic.H, cfg.basic.W), rec_size=(cfg.basic.H, cfg.basic.W))          
     num_params = count_parameters(model)
     logger.info("Total Parameter: \t%2.1fM" % num_params)
-
-    # if cfg.train.load == True:
-    #     load_model(cfg, model)
 
     return model
 
@@ -83,7 +79,6 @@ def set_seed(cfg):
 
 
 def valid(cfg, model, val_loader, global_step, val_psnr, val_ssim):
-    # Validation!
     eval_losses = AverageMeter()
     model.eval()
     epoch_iterator = tqdm(val_loader,
@@ -125,7 +120,7 @@ def valid(cfg, model, val_loader, global_step, val_psnr, val_ssim):
     # Compute Averages
     avg_psnr = val_psnr.compute().item()
     avg_ssim = val_ssim.compute().item()
-    avg_mse = total_mse / len(val_loader.dataset) # Or len(val_loader) if batch_avg, keeping your style
+    avg_mse = total_mse / len(val_loader.dataset) 
     avg_loss = total_loss / len(val_loader)
 
     logger.info("\n")
@@ -152,7 +147,6 @@ def train(cfg, debug, save_path):
     print(untrainable_params)
 
     model.cuda()
-    #model = torch.nn.DataParallel(model)
 
     # Prepare dataset
     train_loader, val_loader = get_loader(cfg)    
@@ -174,18 +168,25 @@ def train(cfg, debug, save_path):
     global_step=0
     best_losses = 999999
 
-    checkpoint_path = os.path.join(cfg.dir.load_model_dir, 'latest_model.pth')
-    if os.path.exists(checkpoint_path) and cfg.train.load: 
-        logger.info(f"Loading checkpoint from {checkpoint_path}")
-        checkpoint = torch.load(checkpoint_path)
-        
-        # Load all states
-        model.load_state_dict(checkpoint['model_state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-        global_step = checkpoint['global_step']
-        
-        logger.info(f"Resumed training from step {global_step}")
+    load_model_dir = cfg.dir.load_model_dir
+
+    if cfg.train.load and load_model_dir:
+        checkpoint_path = os.path.join(load_model_dir, 'latest_model.pth')
+
+        if os.path.exists(checkpoint_path): 
+            logger.info(f"Loading checkpoint from {checkpoint_path}")
+            checkpoint = torch.load(checkpoint_path)
+            
+            # Load all states
+            model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            global_step = checkpoint['global_step']
+            logger.info(f"Resumed training from step {global_step}")
+        else:
+            logger.warning(f"Checkpoint not found at {checkpoint_path}. Training from scratch.")
+    else:
+        logger.info("No checkpoint loading requested. Training from scratch.")
 
     model.zero_grad()
 
@@ -241,22 +242,21 @@ def train(cfg, debug, save_path):
                 
                 interval_steps += 1
 
-            #torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            if cfg.scheduler.use==True:
-                scheduler.step()
             optimizer.step()
             optimizer.zero_grad()
+            if cfg.scheduler.use==True:
+                scheduler.step()
             global_step += 1
 
             epoch_iterator.set_description(
                 "Training (%d / %d Steps) (loss=%2.5f)" % (global_step, t_total, losses.val)
             )
 
-            if global_step % 1000 == 0:         # TODO: added this if - VP
+            if global_step % 1000 == 0:        
                 checkpoint_dict = {
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
-                    'scheduler_state_dict': scheduler.state_dict(), # Important for Warmup/Decay
+                    'scheduler_state_dict': scheduler.state_dict(), 
                     'global_step': global_step,
                 }
                 torch.save(checkpoint_dict, os.path.join(save_path, 'latest_model.pth'))
@@ -285,7 +285,7 @@ def train(cfg, debug, save_path):
                 checkpoint_dict = {
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
-                    'scheduler_state_dict': scheduler.state_dict(), # Important for Warmup/Decay
+                    'scheduler_state_dict': scheduler.state_dict(), 
                     'global_step': global_step,
                 }
 
@@ -295,13 +295,10 @@ def train(cfg, debug, save_path):
                     print(f"New best model saved at step {global_step}")
                 torch.save(checkpoint_dict, os.path.join(save_path, f'model_step_{global_step}.pth'))
 
-                # save a validation rec image. 
-                # save an image from validation run as visual reference while running model - VP
+                # save an image from validation to serve as a visual reference while running model - VP
                 ground_truth = tifffile.imread(cfg.dir.val_pattern_gt_dir)
                 test_in = tifffile.imread(cfg.dir.val_pattern_dir)
                 test_in = (test_in/255).astype(np.float32)     # max of measurements is 255. Normalizing to range [0, 1]
-                height, width, _ = test_in.shape
-                # test_in = resize(test_in, (height // cfg.basic.downsize_coeff, width // cfg.basic.downsize_coeff), anti_aliasing=True).astype(np.float32) 
                 test_in = np.clip(test_in, 0,1)
                 
                 test_out = np.zeros((cfg.basic.H, cfg.basic.W, 3))
@@ -309,7 +306,6 @@ def train(cfg, debug, save_path):
                     test_in_one_channel = test_in[:, :, c]
                     test_in_one_channel = np.reshape(test_in_one_channel,
                                                      (1, 1, cfg.basic.H, cfg.basic.W))
-                    #test_in_one_channel = (test_in_one_channel - test_in_one_channel.mean()) / test_in_one_channel.std()
                     test_in_one_channel.astype(float)
                     test_in_one_channel = torch.from_numpy(test_in_one_channel)
                     test_in_one_channel.cuda()
@@ -322,8 +318,6 @@ def train(cfg, debug, save_path):
                         h_crop, w_crop = test_out_one_channel.shape
                         test_out = np.zeros((h_crop, w_crop, 3))
                     test_out[:, :, c] = test_out_one_channel
-                # cv2.imwrite(cfg.dir.val_rec_dir + str(global_step) + '.bmp',
-                #             cv2.normalize(test_out, None, 0, 255, cv2.NORM_MINMAX))
 
                 if not debug:
                     wandb.log({
@@ -333,7 +327,7 @@ def train(cfg, debug, save_path):
                         "val_loss": val_loss_out,
                         "reconstructed butterfly": wandb.Image(test_out),
                         "ground truth butterfly": wandb.Image(ground_truth),
-                        "val_step": global_step # distinct step for Image slider
+                        "val_step": global_step 
                     }, step=global_step)
                 model.train()
 
@@ -357,13 +351,13 @@ def crop_borders(img, dataset, downsize_coeff, batch=False):
         if dataset == "mirflickr":
             output = output[:,:,60:,62:-38]
             target = target[:,:,60:,62:-38]
-        elif dataset == "diffusercam":    
+        elif dataset == "diffuser":    
             if downsize_coeff == 8:             
                 output = output[:,:,:134, 56:191]     
                 target = target[:,:,:134, 56:191]  
             elif downsize_coeff == 4:
-                output = output[:,:,17:295, 112:390]
-                target = target[:,:,17:295, 112:390]
+                output = output[:,:,13:289, 104:380]
+                target = target[:,:,13:289, 104:380]
         elif dataset == "rml":
             if downsize_coeff == 8:
                 output = output[:,:,14:134, 61:181]
@@ -381,7 +375,7 @@ def crop_borders(img, dataset, downsize_coeff, batch=False):
         if downsize_coeff == 8:
             img = img[:134, 56:191,:]  
         elif downsize_coeff == 4:
-            img = img[17:295, 112:390, :]
+            img = img[13:289, 104:380, :]
     elif dataset == "rml":
         if downsize_coeff == 8:
             img = img[14:134, 61:181,:]
@@ -389,8 +383,7 @@ def crop_borders(img, dataset, downsize_coeff, batch=False):
             img = img[31:270, 128:367, :]
     return img
 
-def main():       
-    #dist.init_process_group(backend='nccl')  
+def main():        
     cfg = OmegaConf.load('/home/ponoma/workspace/Pan_Transformer/configs.yaml')
 
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
@@ -400,7 +393,7 @@ def main():
 
     debug = False
 
-    wandb_id = "t1v062qj"
+    wandb_id = None #"t1v062qj"  # Either make this none or provide a valid W&B ID string. Cannot leave string empty.
     if cfg.basic.dataset != 'mirflickr':
         run_name = f"pan_{cfg.basic.dataset_size}_{cfg.basic.dataset}_{cfg.train.train_batch_size}_x{cfg.basic.downsize_coeff}_downsize_{cfg.optimizer.learning_rate}_lr"
     else:
@@ -410,7 +403,7 @@ def main():
                          entity="wallerlab",
                          name=run_name, 
                          id=wandb_id,            # If this is None, W&B creates a new ID. If it's a string, it resumes that ID.
-                         resume="allow",         # "allow" means: if ID exists, resume it; if not, create new.
+                         resume="allow",        
                          config={"architecture": "Pan Transformer"})  
         
     save_path = os.path.join(cfg.dir.checkpoints_dir, run_name)
