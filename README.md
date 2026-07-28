@@ -1,91 +1,36 @@
+# Pan Transformer Adaptation for ConvRML Experiments
 
-**Title: Image reconstruction with Transformer for mask-based lensless imaging**
+This repository is an adaptation of the original **Lensless Imaging Transformer** (LIT) implementation from Pan et al., *“Image reconstruction with transformer for mask-based lensless imaging,”* Optics Letters, 2022. The original model was used as a baseline in the ConvRML paper.  
 
-**Authors: Xiuxi Pan, Xiao Chen, Saori Takeyama, Masahiro Yamaguchi**
+This fork documents the modifications we made to support our ConvRML-style training, evaluation, and dataset preprocessing pipeline.
 
-**DOI: https://doi.org/10.1364/OL.455378**
+## Summary of Changes
 
-[```ol-47-7-1843.pdf```](./ol-47-7-1843.pdf) is the paper.
+### `train.py`
 
-**News Reports related to this paper**:
+- Added Weights & Biases (wandb) logging for training metrics and image visualizations.
+- Added intermediate checkpoint dictionary saving every 5,000 training steps.
+- Updated metric tracking to match the main ConvRML code for more consistent comparison.
 
-[WIRED](https://wired.jp/article/mask-based-lensless-imaging/),
-[Nikkei](https://www.nikkei.com/article/DGXZQOUC12CUO0S2A510C2000000/),
-[Phys.org](https://phys.org/news/2022-04-lensless-imaging-advanced-machine-image.html),
-[EurekAlert!](https://www.eurekalert.org/news-releases/951125),
-[Tokyo Tech News](https://www.titech.ac.jp/news/2022/063968), et al.
+### `modules.py`
 
-**Awards related to this paper**:
+- Added support for rectangular kernel sizes and images.
+- Updated the encoder to compute feature-map dimensions explicitly after each patch embedding layer.
+- Removed the assumption that input dimensions are square or exactly divisible by 4, 8, and 16.
 
-[2022年度（令和4年度）手島精一記念研究賞 留学生研究賞](https://www.titech.ac.jp/news/2023/066259),
+### `inference.py`
 
-[第38回 (2022年度) 電気通信普及財団賞 テレコムシステム技術学生賞](https://www.taf.or.jp/files/2061/979456817.pdf)
+- Added a custom inference script to match the inference procedure used for ConvRML.
 
-![pipeline](./utils/diagram1.png)
-![hardware for experiment](./utils/diagram2.png)
+### `utils/data_prepare.py`
 
-# DATASET
-The datasets are available in [Yamaguchi Lab OneDrive](https://1drv.ms/u/s!AjbGbGU9gDA1gcB9wd16MYOoPicCIw?e=dlsrxx) (*It may be a temporary place, we are trying to seek a permanent place if many people are interested in it.*)
+- Adapted the ConvRML preprocessing code for the Parallel Lensless Dataset to the Lensless Imaging Transformer
 
-There are three datasets:
-1. mirflickr25k
-  - encoded pattern: 
-    - **mirflickr25k_1600.zip** in the OneDrive
-  - original images: 
-    - available in this [link](https://www.kaggle.com/datasets/paulrohan2020/mirflickr25k?resource=download)
-  - pattern-image matchup: 
-    - the corresponding encoded pattern and original image have the same name, only different in file extension. e.g., pattern "im1.npy"<-> image "im1.jpg".
-2. dogs-vs-cats
-  - encoded pattern: 
-    - **PetImages_1600.zip** in the OneDrive
-  - original images: 
-    - available in this [link](https://www.kaggle.com/competitions/dogs-vs-cats/data), only 25k images in train folder are used.
-  - pattern-image matchup: 
-    - encoded patterns of dog & cat are separated to different folders. e.g., pattern "Cat/0.npy"<-> image "cat.0.jpg", pattern "Dog/1965.npy"<-> image "dog.1965.jpg"
-3. fruits
-  - encoded pattern: 
-    - **fruits_modified.zip** in the OneDrive
-  - original images: 
-    - **fruits_modifiedori.zip** in the OneDrive
-  - pattern-image matchup: 
-    - same name, only different in file extension. e.g., pattern "n07739125_7447.npy"<-> image "n07739125_7447.JPEG".
+### `utils/data_utils.py`
 
+- Added a `get_test_loader` method for inference.
+- Extended the original data-loading structure, which only included training and validation dataloaders, to also support a test split.
 
-The data collection method is written in page 3 of the [original paper](https://github.com/BobPXX/Lensless_Imaging_Transformer/blob/main/ol-47-7-1843.pdf). The program to control the sensor for data collection is available in [my another repository](https://github.com/BobPXX/IDS_sensor_control).
+### `datasets/prepare_dataset.py`
 
-
-# USAGE
-## Training
-```datasets/prepare_datasets.py``` prepares .npy files of dataset address;
-
-```configs.yaml``` defines training implementations;
-
-```train.py``` stars training.
-
-An example of running ```train.py``` in linux: 
-```
-CUDA_VISIBLE_DEVICES=0,1 nohup python -m torch.distributed.launch --nproc_per_node=1 --master_port 29501 train.py &
-```
-
-## Prediction
-```predict.py``` starts prediction.
-
-Checkpoint (```checkpoints/best.pth```) and input patterns (```result/in-wild/pattern/``` and ```result/on-screen/pattern/```) can be used to verify our results.
-
-## Note
-```GrayPSF.npy``` is PSF of our lensless camera. It is not used in this reconstruction method, but a useful file to evaluate status of the optical system.
-
-# MESSAGE
-I am working on productizing lensless camera. Here are some potential applications:
-1. Replace traditional camera in scenarios where space, weight or cost is extremely imposed, e.g., 
-    - cost-sensitive IoT devices, 
-    - under-screen camera, 
-    - a space that is too limited for placing a traditional camera.
-    - ...
-2. Invisible spectrum (e.g, gama-ray, X-ray) imaging
-    - Invisible spectrum imaging is too expensive or impossible for traditional lensed camera because of the usage of lens.
-3. Optics-level privacy-preserving and cryptographic imaging/sensing
-    - The captured encoded pattern is uninterpretable for human. We take this feature to develop privacy pretection and encryption.
-    - My another project [reconstruction-free lensless sensing](https://github.com/BobPXX/LLI_Transformer) verified that direct object recognition on the uninterpretable encoded pattern is possible.
-
-You are warmly welcome to join me for production development or extended research. You are also welcome for any question or discussion. Please contact me through [My LinkedIn homepage](https://www.linkedin.com/in/xiuxi-pan-ph-d-aa8868222/) or email. 
+- Updated dataset splitting to match the ConvRML train/validation/test split structure.
