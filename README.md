@@ -1,6 +1,6 @@
 # Pan Transformer Adaptation for ConvRML Experiments
 
-This repository is an adaptation of the original **Lensless Imaging Transformer** (LIT) implementation from Pan et al., *“Image reconstruction with transformer for mask-based lensless imaging,”* Optics Letters, 2022. The original model was used as a baseline in the ConvRML paper.  
+This repository is an adaptation of the original **Lensless Imaging Transformer** (LIT) implementation from Pan et al., *“Image reconstruction with transformer for mask-based lensless imaging,”* Optics Letters, 2022. The original model was used as a baseline in the ConvRML paper: https://doi.org/10.48550/arXiv.2602.04834
 
 This fork documents the modifications we made to support our ConvRML-style training, evaluation, and dataset preprocessing pipeline.
 

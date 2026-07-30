@@ -18,6 +18,9 @@ import re
 from model import Rec_Transformer
 from utils.data_utils import get_test_loader
 
+rml_homography_matrix_path = "" # put in path to rml homography matrix
+diffuser_homography_matrix_path = "" # put in path to diffuser homography matrix
+
 
 def _extract_image_id(name: str):
     """Match ids in filenames like ...img_64... or im64."""
@@ -105,9 +108,9 @@ def main():
     dataset = cfg.basic.dataset
     if dataset != 'mirflickr':
         if dataset == "rml":            
-            homography_matrix = torch.load("/home/ponoma/workspace/ConvRML_clean/homography_matrices/GT2RML_homography_4x_2026_detached.npy", weights_only=True) 
+            homography_matrix = torch.load(rml_homography_matrix_path, weights_only=True) 
         elif dataset == 'diffuser':
-            homography_matrix = torch.load("/home/ponoma/workspace/ConvRML_clean/homography_matrices/GT2DC_homography_x4_2026_detached_May2026_FINAL.npy", weights_only=True)
+            homography_matrix = torch.load(diffuser_homography_matrix_path, weights_only=True)
 
     # Need to invert to get RML/diffuser -> GT warp
     imager_to_gt_homography_matrix = torch.inverse(homography_matrix).to(device)

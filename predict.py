@@ -24,12 +24,12 @@ def setup(load_model_dir,input_size, output_size):
 def predict(color, input_size, output_size, model, file, rec_dir):
     test_in = np.load(file) 
     
-    # TODO: Added this after began cropping images - VP
+    # Added this after began cropping images
     height, width, _ = test_in.shape
     x = (width // 2) - (input_size // 2)                   # width // 2 = center_x
     y = (height // 2) - (input_size // 2)                  # cfg.basic.input_size // 2 = half of image
     test_in = test_in[x:x+input_size, y: y+input_size]
-    # TODO: End my code
+    # End of code modification
 
     if color:
         b, g, r = cv2.split(test_in)
@@ -63,13 +63,13 @@ def predict(color, input_size, output_size, model, file, rec_dir):
 def main():
     input_size=1024
     output_size=500
-    test_dir= '/home/ponoma/workspace/Lensless_Imaging_Transformer/datasets/test_patterns.npy'
+    test_dir= 'datasets/test_patterns.npy'
     files= np.load(test_dir) #os.listdir(test_dir)
-    rec_dir= '/home/ponoma/workspace/Lensless_Imaging_Transformer/1k_results'
+    rec_dir= '1k_results'
     if not os.path.exists(rec_dir):
         os.makedirs(rec_dir)
 
-    load_model_dir = '/home/ponoma/workspace/Lensless_Imaging_Transformer/1k_images/best_model.pth'
+    load_model_dir = '1k_images/best_model.pth'
     model = setup(load_model_dir,input_size,output_size)
     model.cuda()
     for file in tqdm(files):

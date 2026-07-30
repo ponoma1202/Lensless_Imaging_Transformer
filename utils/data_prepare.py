@@ -10,6 +10,9 @@ import tifffile
 from skimage.transform import resize
 import kornia.geometry.transform as transform
 
+rml_homography_matrix_path = "" # put in path to rml homography matrix
+diffuser_homography_matrix_path = "" # put in path to diffuser homography matrix
+
 class get_data(Dataset):
     def __init__(
         self,
@@ -32,18 +35,16 @@ class get_data(Dataset):
         self.stack_rgb = stack_rgb
 
         self.use_processed = True
-        if dataset == 'rml' and not self.use_processed:
-            self.homography_matrix = torch.load("/home/ponoma/workspace/ConvRML_clean/homography_matrices/GT2DC_homography_x4_2026_detached_May2026_FINAL.npy", weights_only=True)
 
         if self.split == 'train':
-            self.patterns=np.load(self.save_dir+'train_patterns.npy')
-            self.targets = np.load(self.save_dir + 'train_targets.npy')
+            self.patterns=np.load(os.path.join(self.save_dir, 'train_patterns.npy'))
+            self.targets = np.load(os.path.join(self.save_dir, 'train_targets.npy'))
         elif self.split == 'val':
-            self.patterns = np.load(self.save_dir + 'val_patterns.npy')
-            self.targets = np.load(self.save_dir + 'val_targets.npy')
+            self.patterns = np.load(os.path.join(self.save_dir, 'val_patterns.npy'))
+            self.targets = np.load(os.path.join(self.save_dir, 'val_targets.npy'))
         elif self.split == 'test':
-            self.patterns = np.load(self.save_dir + 'test_patterns.npy')
-            self.targets = np.load(self.save_dir + 'test_targets.npy')
+            self.patterns = np.load(os.path.join(self.save_dir, 'test_patterns.npy'))
+            self.targets = np.load(os.path.join(self.save_dir, 'test_targets.npy'))
         else:
             raise ValueError("split must be 'train', 'val', or 'test'")
 
@@ -96,10 +97,10 @@ class get_data(Dataset):
 def apply_homography(img, dataset="rml", downsize=4):
     if dataset == "rml":
         if downsize == 4:
-            M = torch.load("/home/ponoma/workspace/ConvRML_clean/homography_matrices/GT2RML_homography_4x_2026_detached.npy").to(torch.float32)
+            M = torch.load(rml_homography_matrix_path).to(torch.float32)
     elif dataset == "diffuser":
         if downsize == 4:
-            M = torch.load("/home/ponoma/workspace/ConvRML_clean/homography_matrices/GT2DC_homography_x4_2026_detached_May2026_FINAL.npy").to(torch.float32)
+            M = torch.load(diffuser_homography_matrix_path).to(torch.float32)
 
     # Convert to tensor and ensure array is stored contiguously for faster operations
     img = np.ascontiguousarray(img)
