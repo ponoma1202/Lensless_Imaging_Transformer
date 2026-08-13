@@ -166,7 +166,7 @@ def train(cfg, debug, save_path):
     scheduler = WarmupCosineSchedule(optimizer, warmup_steps=cfg.scheduler.warmup_steps, t_total=t_total)
     
     global_step=0
-    best_losses = 999999
+    best_losses = float("inf")
 
     load_model_dir = cfg.dir.load_model_dir
 
@@ -182,6 +182,7 @@ def train(cfg, debug, save_path):
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
             global_step = checkpoint['global_step']
+            best_losses = checkpoint.get("best_loss", float("inf"))
             logger.info(f"Resumed training from step {global_step}")
         else:
             logger.warning(f"Checkpoint not found at {checkpoint_path}. Training from scratch.")
@@ -252,12 +253,34 @@ def train(cfg, debug, save_path):
                 "Training (%d / %d Steps) (loss=%2.5f)" % (global_step, t_total, losses.val)
             )
 
+            if global_step % cfg.train.eval_every == 0:
+                val_loss_out, val_psnr_out, val_mse_loss, val_ssim_out, _ =valid(cfg, model, val_loader, global_step, val_psnr, val_ssim)
+
+                is_best = val_mse_loss < best_losses
+
+                if is_best:
+                    best_losses = val_mse_loss
+
+                checkpoint_dict = {
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'scheduler_state_dict': scheduler.state_dict(), 
+                    'global_step': global_step,
+                    'best_loss': best_losses,
+                }
+                torch.save(checkpoint_dict, os.path.join(save_path, f'model_step_{global_step}.pth'))
+
+                if is_best:
+                    torch.save(checkpoint_dict, os.path.join(save_path, "best_model.pth"))
+                    print(f"New best model saved at step {global_step}")
+
             if global_step % 1000 == 0:        
                 checkpoint_dict = {
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'scheduler_state_dict': scheduler.state_dict(), 
                     'global_step': global_step,
+                    'best_loss': best_losses,
                 }
                 torch.save(checkpoint_dict, os.path.join(save_path, 'latest_model.pth'))
 
@@ -278,22 +301,6 @@ def train(cfg, debug, save_path):
                 interval_loss = 0.0
                 interval_mse = 0.0
                 interval_steps = 0
-
-            if global_step % cfg.train.eval_every == 0:
-                val_loss_out, val_psnr_out, val_mse_loss, val_ssim_out, val_loss_out_duplicate=valid(cfg, model, val_loader, global_step, val_psnr, val_ssim)
-
-                checkpoint_dict = {
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(),
-                    'scheduler_state_dict': scheduler.state_dict(), 
-                    'global_step': global_step,
-                }
-
-                if val_mse_loss < best_losses:
-                    torch.save(checkpoint_dict, os.path.join(save_path, "best_model.pth"))
-                    best_losses = val_mse_loss
-                    print(f"New best model saved at step {global_step}")
-                torch.save(checkpoint_dict, os.path.join(save_path, f'model_step_{global_step}.pth'))
 
                 # save an image from validation to serve as a visual reference while running model - VP
                 ground_truth = tifffile.imread(cfg.dir.val_pattern_gt_dir)
