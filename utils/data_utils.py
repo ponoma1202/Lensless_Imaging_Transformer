@@ -2,9 +2,7 @@ import torch
 
 from torchvision import transforms, datasets
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, SequentialSampler
-import sys
-sys.path.append('/home/ponoma/workspace/Pan_Transformer/utils/')  # TODO: would not recognize local path to data_prepare
-from data_prepare import get_data
+from .data_prepare import get_data
 from omegaconf import OmegaConf
 
 

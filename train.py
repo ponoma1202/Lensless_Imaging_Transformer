@@ -1,7 +1,7 @@
 import os
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
-os.environ["CUDA_VISIBLE_DEVICES"] = '0'                # TODO: Change this to the GPU number you want to use.
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 import wandb
 import random
@@ -24,6 +24,10 @@ from utils.data_utils import get_loader
 
 writer = SummaryWriter('log')
 logger = logging.getLogger(__name__)
+
+wandb_entity = "" # put in entity name 
+wandb_project = "" # put in project name 
+config_path = "configs.yaml"
 
 
 class AverageMeter(object):
@@ -391,7 +395,7 @@ def crop_borders(img, dataset, downsize_coeff, batch=False):
     return img
 
 def main():        
-    cfg = OmegaConf.load('/home/ponoma/workspace/Pan_Transformer/configs.yaml')
+    cfg = OmegaConf.load(config_path)
 
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
@@ -406,8 +410,8 @@ def main():
     else:
         run_name = f"pan_mirflickr_{cfg.train.train_batch_size}_big_gpu"
     if not debug:
-        run = wandb.init(project="convrml", 
-                         entity="wallerlab",
+        run = wandb.init(project=wandb_project, 
+                         entity=wandb_entity,
                          name=run_name, 
                          id=wandb_id,            # If this is None, W&B creates a new ID. If it's a string, it resumes that ID.
                          resume="allow",        

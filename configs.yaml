@@ -12,14 +12,14 @@ loss:
   LPIPS_t: 0
 
 dir:
-  checkpoints_dir: '/home/ponoma/workspace/Pan_Transformer/my_checkpoints/'   
+  checkpoints_dir: './checkpoints/'   
   load_model_dir: ''                                                                        # Do not include 'latest_model.pth'. It will be automatically appended
 
   # MAKE SURE TO CHANGE THIS PATH DEPENDING ON WHICH DATASET YOU ARE USING. Otherwise your visualized image will diverge.
-  val_pattern_dir: '/home/lakabuli/4tb_patrick/dataset100k26/4x_rml/4x_img_64_cam_1.tiff'   # path to an image in val_directory to save as reference
-  val_pattern_gt_dir: '/home/lakabuli/4tb_patrick/dataset100k26/4x_undistorted_GT2RML/warped_4x_undistorted_img_64_cam_2.tiff'
-  val_rec_dir: '/home/ponoma/workspace/Pan_Transformer/testing/'   # where to save val reference image from above
-  dataset_dir: '/home/ponoma/workspace/Pan_Transformer/datasets/'
+  val_pattern_dir: ''   # TODO: REPLACE with path to a validation measurement image (e.g. .../4x_rml/4x_img_64_cam_1.tiff)
+  val_pattern_gt_dir: ''  # TODO: REPLACE with path to matching GT image (e.g. .../4x_undistorted_GT2RML/warped_4x_undistorted_img_64_cam_2.tiff)
+  val_rec_dir: './testing/'   # where to save val reference image from above
+  dataset_dir: './datasets/'
 
 train:
   GPU_num: 2      # counterintuitive name, but this is used to calculate num workers
@@ -44,10 +44,10 @@ infer:
   batch_size: 1                    # test DataLoader batch size (each sample is full RGB)
   save_ids: [1, 64, 93, 195, 912]                      # if non-empty, only save .npy for these image ids; empty => save nothing
   save_metrics: True
-  save_infer_dir: "/home/ponoma/workspace/Pan_Transformer/infer_results"
+  save_infer_dir: "./infer_results"
   # Optional full path to checkpoint; if null, uses checkpoints_dir/<run_name>/best_model.pth
   checkpoint_path: null
   warp_to_gt: True
-  # Homography .npy (GT2imager); inverted at runtime for imager -> GT (same as your previous inference.py).
-  homography_rml: "/home/ponoma/workspace/ConvRML_clean/homography_matrices/GT2RML_homography_4x_2026_detached.npy"
-  homography_diffusercam: "/home/ponoma/workspace/ConvRML_clean/homography_matrices/GT2DC_homography_x4_2026_detached_May2026_FINAL.npy"
+  # Homography .npy (GT2imager); inverted at runtime for imager -> GT 
+  homography_rml: "GT2RML_homography_4x_2026_detached_numpy.npy" # TODO replace with absolute path
+  homography_diffusercam: "GT2DC_homography_4x_2026_detached_numpy.npy" # TODO replace with absolute path

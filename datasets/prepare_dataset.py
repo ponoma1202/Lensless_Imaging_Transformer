@@ -3,8 +3,9 @@ import numpy as np
 import random
 from natsort import natsorted
 
-save_path = "/home/ponoma/workspace/Pan_Transformer/datasets/"  
-root_dir = "/home/lakabuli/4tb_patrick/dataset100k26"        # TODO: change to your own path where the dataset is stored
+save_path = "datasets/"  # path for saving 
+root_dir = ""   # TODO: change to path where Parallel Lensless Dataset is stored
+mirflickr_dir = "" # optional: path where 25k DiffuserCam Lensless Mirflickr Dataset is stored
 dataset = 'rml'    # TODO: edit as necessary
 
 percentage = 0.75       # TODO: edit as necessary
@@ -16,8 +17,8 @@ elif dataset == 'diffuser':
     data_dir = os.path.join(root_dir, "4x_diffuser")  
     target_dir = os.path.join(root_dir, "4x_undistorted_GT2DC_May2026")
 elif dataset == "mirflickr":
-    data_dir = "/home/ponoma/workspace/DATA/mirflickr_dataset/diffuser_images_npy"
-    target_dir = "/home/ponoma/workspace/DATA/mirflickr_dataset/ground_truth_lensed_npy"
+    data_dir = mirflickr_dir + "/diffuser_images_npy"
+    target_dir = mirflickr_dir + "/ground_truth_lensed_npy"
 
 full_data_list_data = [f for f in os.listdir(data_dir) if f.endswith('.tiff') or f.endswith('.tif')]
 sorted_data_list_data = natsorted(full_data_list_data) # Sort the lists in numerical order
